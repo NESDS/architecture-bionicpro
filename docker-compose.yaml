@@ -45,6 +45,29 @@ services:
       - "8123:8123"
       - "9000:9000"
 
+  # === Airflow (Standalone mode) ===
+  airflow:
+    image: apache/airflow:2.7.3-python3.11
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'bionicpro-secret-key'
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_DATABASE: bionicpro
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow-data:/opt/airflow
+    ports:
+      - "8081:8080"
+    depends_on:
+      - clickhouse
+    command: standalone
+
   # === Backend API ===
   backend:
     build:
@@ -78,3 +101,6 @@ services:
     depends_on:
       - backend
       - keycloak
+
+volumes:
+  airflow-data:

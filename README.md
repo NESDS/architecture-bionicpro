@@ -121,21 +121,18 @@ const initOptions = {
 #### Структура DAG:
 
 ```
-create_clickhouse_tables
-         │
-    ┌────┴────┐
-    ▼         ▼
+     create_tables
+          │
+     ┌────┴────┐
+     ▼         ▼
 extract_crm  extract_telemetry
-    │         │
-    └────┬────┘
-         ▼
-  load_staging_tables
-         │
-         ▼
- transform_and_load_mart
-         │
-         ▼
-    validate_data
+     │         │
+     └────┬────┘
+          ▼
+   transform_and_load
+          │
+          ▼
+     validate_data
 ```
 
 #### Витрина `reports_mart`:
@@ -268,9 +265,41 @@ reports = clickhouse_service.get_reports_by_user(user_id=user_id)
 
 ## Запуск проекта
 
+### 1. Запуск всех сервисов
+
 ```bash
 docker-compose up -d
 ```
 
-- Frontend: http://localhost:3000
-- Keycloak: http://localhost:8080 (admin/admin)
+### 2. Сервисы
+
+| Сервис | URL | Логин/Пароль |
+|--------|-----|--------------|
+| Frontend | http://localhost:3000 | — |
+| Backend API | http://localhost:8000/docs | — |
+| Keycloak | http://localhost:8080 | admin / admin |
+| **Airflow** | http://localhost:8081 | admin / admin |
+| ClickHouse | http://localhost:8123 | — |
+
+### 3. Запуск ETL в Airflow
+
+1. Откройте Airflow: http://localhost:8081
+2. Войдите: `admin` / `admin`
+3. Найдите DAG: `etl_reports_bionicpro`
+4. Включите DAG (toggle)
+5. Нажмите "Trigger DAG" (▶️) для запуска
+
+### 4. Проверка данных в ClickHouse
+
+```bash
+docker exec architecture-bionicpro-clickhouse-1 clickhouse-client \
+  --query "SELECT user_id, report_date, total_usage_hours FROM bionicpro.reports_mart"
+```
+
+### 5. Тестовые пользователи
+
+| Username | Password | Роль |
+|----------|----------|------|
+| prothetic1 | prothetic123 | prothetic_user |
+| prothetic2 | prothetic123 | prothetic_user |
+| prothetic3 | prothetic123 | prothetic_user |
