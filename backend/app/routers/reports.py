@@ -66,26 +66,46 @@ async def get_my_reports(
     try:
         # Проверка последней даты ETL
         latest_etl_date = clickhouse_service.get_latest_etl_date()
-        
-        # Предупреждение если запрашиваются данные за будущий период
-        if date_to and latest_etl_date and date_to > latest_etl_date:
-            logger.warning(
-                f"User {user_id} requested data up to {date_to}, "
-                f"but latest ETL date is {latest_etl_date}"
+
+        # Если ETL ещё не запускался — отчётов быть не может
+        if not latest_etl_date:
+            return ReportResponse(
+                success=True,
+                user_id=user_id,
+                reports=[],
+                total_count=0,
+                message="Данные ещё не подготовлены (ETL не выполнялся)"
             )
-        
+
+        # Ограничиваем период только обработанными Airflow данными
+        effective_date_to = date_to or latest_etl_date
+        if effective_date_to > latest_etl_date:
+            logger.warning(
+                f"User {user_id} requested date_to={effective_date_to}, "
+                f"but latest ETL date is {latest_etl_date}. Clamping to latest."
+            )
+            effective_date_to = latest_etl_date
+
+        if date_from and date_from > latest_etl_date:
+            return ReportResponse(
+                success=True,
+                user_id=user_id,
+                reports=[],
+                total_count=0,
+                message=f"Нет данных за выбранный период. Последняя обработка ETL: {latest_etl_date}"
+            )
+
         # Получение отчётов из ClickHouse ТОЛЬКО для текущего пользователя
         reports = clickhouse_service.get_reports_by_user(
             user_id=user_id,
             date_from=date_from,
-            date_to=date_to,
+            date_to=effective_date_to,
             limit=limit
         )
         
         if not reports:
             message = f"Нет данных для пользователя {user_id}"
-            if latest_etl_date:
-                message += f". Последняя обработка ETL: {latest_etl_date}"
+            message += f". Последняя обработка ETL: {latest_etl_date}"
             
             return ReportResponse(
                 success=True,
@@ -100,7 +120,7 @@ async def get_my_reports(
             user_id=user_id,
             reports=reports,
             total_count=len(reports),
-            message=f"Данные актуальны на {latest_etl_date}" if latest_etl_date else None
+            message=f"Данные актуальны на {latest_etl_date}"
         )
         
     except Exception as e:

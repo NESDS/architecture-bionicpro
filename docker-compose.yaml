@@ -47,7 +47,9 @@ services:
 
   # === Airflow (Standalone mode) ===
   airflow:
-    image: apache/airflow:2.7.3-python3.11
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
     environment:
       AIRFLOW__CORE__EXECUTOR: SequentialExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
@@ -56,6 +58,8 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
       AIRFLOW__WEBSERVER__SECRET_KEY: 'bionicpro-secret-key'
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_PORT: 8123
       CLICKHOUSE_DATABASE: bionicpro
